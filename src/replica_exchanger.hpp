@@ -68,7 +68,7 @@ namespace RE{
     };
     REMInfo *reminfo  = nullptr;
     TReplica *replica = nullptr;
-    AcceptanceRatio *accept_ratio[2*NDIM] = nullptr;
+    AcceptanceRatio *accept_ratio[2*NDIM];
 
     std::fstream *output = nullptr;
 
@@ -82,14 +82,15 @@ namespace RE{
     TReplica& operator[](const int i){ return replica[i]; }
     const TReplica& operator[](const int i) const { return replica[i]; }
 
-    ReplicaExchanger(){};
+    ReplicaExchanger(){
+      for(int i=0;i<2*NDIM;i++) accept_ratio[i] = nullptr;
+    };
     ~ReplicaExchanger(){
       if(replica != nullptr) delete[] replica;
       if(reminfo != nullptr) delete[] reminfo;
-      if(accept_ratio != nullptr){
-	for(int i=0;i<2*NDIM;i++){
+      for(int i=0;i<2*NDIM;i++){
+	if(accept_ratio[i] != nullptr)
 	  delete[] accept_ratio[i];
-	}
       }
 
       if(output != nullptr){
