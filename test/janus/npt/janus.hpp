@@ -693,9 +693,20 @@ public:
       exit(-1);
     }
     fprintf(fp,"'box_sx= %lf,box_sy= %lf,box_sz= %lf,box_ex= %lf,box_ey= %lf,box_ez= %lf\n",-sideh[0],-sideh[1],-sideh[2],sideh[0],sideh[1],sideh[2]);
+    fprintf(fp, "'r0=0.35\n");
+    fprintf(fp, "'r1=0.20\n");
+    fprintf(fp, "'r2=0.1 c2=(256,256,0)\n");
     for(int i=0;i<N;i++){
       dvec3 rtmp = r[i] * side;
-      fprintf(fp,"%d %d %lf %lf %lf\n",i,type[i],rtmp[0],rtmp[1],rtmp[2]);
+      fprintf(fp, "%d %d %lf %lf %lf\n"
+	      i, type[i], rtmp[0], rtmp[1], rtmp[2]);
+      if(type[i] != 1){
+	for(int j=0;j<pinfo.npatch;j++){
+	  const dvec3 n = (Rotate(a[i])*pinfo.patch[j])*0.2;
+	  fprintf(fp, "%d %d %lf %lf %lf\n",
+		i, 2, rtmp[0]+n[0], rtmp[1]+n[1], rtmp[2]+n[2]);
+	}
+      }
     }
     fclose(fp);
   }
