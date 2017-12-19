@@ -77,7 +77,6 @@ int main(int argc,char **argv){
     }
     if(opt == "--output" || opt == "-o"){
       output_prefix = argv[++count];
-      flag_read = true;
       fprintf(stderr,"output_prefix:\t%s\n",output_prefix.c_str());
       fprintf(stderr,"read mode is on\n");
       continue;
