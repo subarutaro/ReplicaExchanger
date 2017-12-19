@@ -698,7 +698,7 @@ public:
     fprintf(fp, "'r2=0.1 c2=(256,256,0)\n");
     for(int i=0;i<N;i++){
       dvec3 rtmp = r[i] * side;
-      fprintf(fp, "%d %d %lf %lf %lf\n"
+      fprintf(fp, "%d %d %lf %lf %lf\n",
 	      i, type[i], rtmp[0], rtmp[1], rtmp[2]);
       if(type[i] != 1){
 	for(int j=0;j<pinfo.npatch;j++){
