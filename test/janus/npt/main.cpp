@@ -167,10 +167,11 @@ int main(int argc,char **argv){
       for(int i=0;i<re.getLocalNumberOfReplicas();i++){
 	std::stringstream strs;
 	strs << output_prefix << re[i].getCondition().getPrefix();
-	strs << "_" << std::setfill('0') << std::setw(8) << cdv_step++;
+	strs << "_" << std::setfill('0') << std::setw(8) << cdv_step;
 	strs << ".cdv";
 	re[i].outputCDV(strs.str());
       }
+      cdv_step++;
       next_cdv += cdv_interval;
     }
   }
@@ -178,5 +179,6 @@ int main(int argc,char **argv){
   for(int i=0;i<re.getLocalNumberOfReplicas();i++){
     re[i].outputCheckPoint(output_prefix+re[i].getCondition().getPrefix()+".chk");
   }
+  re.OutputAcceptanceRatio(output_prefix);
   RE::Finalize();
 }
