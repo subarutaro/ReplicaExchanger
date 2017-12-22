@@ -100,8 +100,9 @@ int main(int argc,char **argv){
       fprintf(stderr,"--nstep               | -s: number of steps in a interval\n");
       fprintf(stderr,"--patchy_info_file    | -p: file name of patchy info file\n");
       fprintf(stderr,"-N:                         number of particles\n");
-      fprintf(stderr,"--max:                      max Beta and PBeta(e.g. --max 1.0 2.0)\n");
-      fprintf(stderr,"--min:                      min Beta and PBeta(e.g. --min 0.5 1.0)\n");
+      fprintf(stderr,"--max:                      max 1/T and P/T (e.g. --max 1.0 2.0)\n");
+      fprintf(stderr,"--min:                      min 1/T and P/T (e.g. --min 0.5 1.0)\n");
+      fprintf(stderr,"--dimension           | -d: number of replicas in each axis (e.g. -d 10 5 for 50 replicas)\n");
       fprintf(stderr,"--snapshot_interval   | -S: snapshot is generated at every this interval\n");
       fprintf(stderr,"--checkpoint_interval | -c: checkpoint is generated at every this interval\n");
       exit(0);
@@ -161,6 +162,7 @@ int main(int argc,char **argv){
       for(int i=0;i<re.getLocalNumberOfReplicas();i++){
 	re[i].outputCheckPoint(output_prefix+re[i].getCondition().getPrefix()+".chk");
       }
+      re.OutputAcceptanceRatio(output_prefix);
       next_chk += chk_interval;
     }
     if(next_cdv == s){
@@ -175,10 +177,5 @@ int main(int argc,char **argv){
       next_cdv += cdv_interval;
     }
   }
-
-  for(int i=0;i<re.getLocalNumberOfReplicas();i++){
-    re[i].outputCheckPoint(output_prefix+re[i].getCondition().getPrefix()+".chk");
-  }
-  re.OutputAcceptanceRatio(output_prefix);
   RE::Finalize();
 }
