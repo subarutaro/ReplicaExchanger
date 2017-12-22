@@ -68,7 +68,7 @@ namespace RE{
     };
     REMInfo *reminfo  = nullptr;
     TReplica *replica = nullptr;
-    AcceptanceRatio *accept_ratio[2*NDIM];
+    AcceptanceRatio *accept_ratio[NDIM];
 
     std::fstream *output = nullptr;
 
@@ -83,12 +83,12 @@ namespace RE{
     const TReplica& operator[](const int i) const { return replica[i]; }
 
     ReplicaExchanger(){
-      for(int i=0;i<2*NDIM;i++) accept_ratio[i] = nullptr;
+      for(int i=0;i<NDIM;i++) accept_ratio[i] = nullptr;
     };
     ~ReplicaExchanger(){
       if(replica != nullptr) delete[] replica;
       if(reminfo != nullptr) delete[] reminfo;
-      for(int i=0;i<2*NDIM;i++){
+      for(int i=0;i<NDIM;i++){
 	if(accept_ratio[i] != nullptr)
 	  delete[] accept_ratio[i];
       }
@@ -110,7 +110,7 @@ namespace RE{
 	reminfo[i].rindex = reminfo[i].cindex = i;
       }
 
-      for(int i=0;i<2*NDIM;i++){
+      for(int i=0;i<NDIM;i++){
 	accept_ratio[i] = new AcceptanceRatio[nreplica_total];
       }
 
@@ -218,9 +218,9 @@ namespace RE{
 	    fprintf(stderr,"replica %d and %d is exchanged\n",ri_a.rindex,ri_b.rindex);
 	    #endif
 	    std::swap(ri_a.rindex,ri_b.rindex);
-	    accept_ratio[2*dim+oddoreven][a].Accept();
+	    accept_ratio[dim][a].Accept();
 	  }else{
-	    accept_ratio[2*dim+oddoreven][a].Deny();
+	    accept_ratio[dim][a].Deny();
 	  }
 	}
 	dim++;
@@ -349,6 +349,28 @@ namespace RE{
 #endif
       std::sort(reminfo,reminfo+nreplica_total,
 		[](const REMInfo& a,const REMInfo& b){return a.rindex < b.rindex;});
+    }
+
+    void OutputAcceptanceRatio(std::string prefix = "./"){
+      if(myrank == 0){
+	std::sort(reminfo,reminfo+nreplica_total,
+		  [](const REMInfo& a,const REMInfo& b){return a.cindex < b.cindex;});
+
+	std::string filename = prefix + "acceptance_ratio.dat";
+	std::ofstream ofs(filename);
+	for(int d=0;d<NDIM;d++){
+	  for(int i=0;i<nreplica_total;i++){
+	    ivec index = index2Indices(i,ndim);
+	    index[d]++;
+	    if(index[d]>=ndim[d]) index[d] -= ndim[d];
+	    const int j = indices2Index(index,ndim);
+	    ofs << reminfo[i].condition << " <--> " << reminfo[j].condition << " " << accept_ratio[d][i].get() << std::endl;
+	  }
+	}
+
+	std::sort(reminfo,reminfo+nreplica_total,
+		  [](const REMInfo& a,const REMInfo& b){return a.rindex < b.rindex;});
+      }
     }
 
     const int getTotalNumberOfReplicas() const { return nreplica_total; }
