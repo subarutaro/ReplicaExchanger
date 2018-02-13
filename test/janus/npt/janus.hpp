@@ -575,7 +575,7 @@ public:
     calcPotentialEnergy();
     calcKineticEnergy();
     tot  = pot+sum(kin);
-    tot += 0.5*zeta*zeta*Q + 3.0*N*T*logs;
+    tot += 0.5*zeta*zeta*Q + 6.0*N*T*logs;
     tot += 0.5*Pv*Pv/M + P*vol;
   }
 
