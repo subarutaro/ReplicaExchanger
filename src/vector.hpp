@@ -3,6 +3,13 @@
 
 #include <iostream>
 #include <iomanip>
+#include <cassert>
+
+#ifdef __NVCC__
+#define __ATTRIBUTE__ __host__ __device__
+#else
+#define __ATTRIBUTE__
+#endif
 
 template <class T,int D>
 class Vector{
@@ -10,7 +17,12 @@ class Vector{
   typedef Vector<T,D> Me;
   #define FORDIM() for(int i=0;i<D;i++)
 
-  T data[D];
+  union{
+    T data[D];
+    struct{
+      T x,y,z,w;
+    };
+  };
 
   Vector(){};
   Vector(const T& s){FORDIM() data[i] = s;}
@@ -28,9 +40,13 @@ class Vector{
   Vector(const Vector<T2,D>& v){FORDIM() data[i] = (T)v[i];}
   ~Vector(){};
 
+  __ATTRIBUTE__
   T &operator[](const int index){assert(index<D);return data[index];}
+  __ATTRIBUTE__
   const T &operator[](const int index) const {assert(index<D);return data[index];}
+  __ATTRIBUTE__
   T &operator()(const int index){return data[index];}
+  __ATTRIBUTE__
   const T &operator()(const int index) const {return data[index];}
 
   Me operator+(const Me &p) const {
@@ -125,13 +141,13 @@ class Vector{
     return val;
   }
   
-  /*
+#if 0
   template <class T2>
   const Me &operator=(const Vector<T2,D> &p){
     FORDIM() data[i] = p[i];
     return *this;
   }
-  //*/
+#endif
   const Me &operator=(const T &s){
     FORDIM() data[i] = s;
     return *this;
@@ -161,14 +177,14 @@ class Vector{
   //cast operator
   operator       T*()       {return data;}
   operator const T*() const {return data;}
-  /*
+#if 0
   template <class P>
   operator Vector<P,D>(){
     Vector<P,D> val;
     FORDIM() val[i] = (P)data[i];
     return val;
   }
-  //*/
+#endif
   // mathmatical operator
   friend T max(const Me v){
     T val = v[0];
@@ -283,10 +299,14 @@ int indices2Index(Vector<int,NDIM>& indices,Vector<int,NDIM>& ndim){
 typedef Vector<double,2> dvec2;
 typedef Vector<double,3> dvec3;
 typedef Vector<double,4> dvec4;
+typedef Vector<float ,2> fvec2;
+typedef Vector<float ,3> fvec3;
+typedef Vector<float ,4> fvec4;
 typedef Vector<int,3>    ivec3;
 typedef Vector<int,4>    ivec4;
 
 typedef Vector<dvec3,3> dvec33;
 typedef Vector<dvec4,4> dvec44;
 
+#undef __ATTRIBUTE__
 #endif
