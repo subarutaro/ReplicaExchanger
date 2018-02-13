@@ -170,25 +170,27 @@ public:
   }
   __ATTRIBUTES__
   const T& operator[](const int i) const {
-    if(i>=4 || i<0){
-      std::cerr << "error: invalid index(= " << i <<  ") for Vector4." << std::endl;
-      exit(-1);
-    }
     if(i==0) return x;
     if(i==1) return y;
     if(i==2) return z;
     if(i==3) return w;
+    if(i>=4 || i<0){
+      std::cerr << "error: invalid index(= " << i <<  ") for Vector4." << std::endl;
+      exit(-1);
+    }
+    return x;
   }
   __ATTRIBUTES__
   T& operator[](const int i){
-    if(i>=4 || i<0){
-      std::cerr << "error: invalid index(= " << i <<  ") for Vector4." << std::endl;
-      exit(-1);
-    }
     if(i==0) return x;
     if(i==1) return y;
     if(i==2) return z;
     if(i==3) return w;
+    if(i>=4 || i<0){
+      std::cerr << "error: invalid index(= " << i <<  ") for Vector4." << std::endl;
+      exit(-1);
+    }
+    return x;
   }
   __ATTRIBUTES__
   friend T norm(const Vector4& v){

@@ -165,23 +165,25 @@ public:
   }
   __ATTRIBUTES__
   const T& operator[](const int i) const {
+    if(i==0) return x;
+    if(i==1) return y;
+    if(i==2) return z;
     if(i>=3 || i<0){
       std::cerr << "error: invalid index(= " << i <<  ") for Vector3." << std::endl;
       exit(-1);
     }
-    if(i==0) return x;
-    if(i==1) return y;
-    if(i==2) return z;
+    return x;
   }
   __ATTRIBUTES__
   T& operator[](const int i){
+    if(i==0) return x;
+    if(i==1) return y;
+    if(i==2) return z;
     if(i>=3 || i<0){
       std::cerr << "error: invalid index(= " << i <<  ") for Vector3." << std::endl;
       exit(-1);
     }
-    if(i==0) return x;
-    if(i==1) return y;
-    if(i==2) return z;
+    return x;
   }
   __ATTRIBUTES__
   friend T norm(const Vector3& v){
