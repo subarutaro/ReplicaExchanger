@@ -99,7 +99,7 @@ int main(int argc,char **argv){
       fprintf(stderr,"--ninterval_eq        | -e: number of intervals for equilibration\n");
       fprintf(stderr,"--nstep               | -s: number of steps in a interval\n");
       fprintf(stderr,"--patchy_info_file    | -p: file name of patchy info file\n");
-      fprintf(stderr,"-N:                         number of particles\n");
+      fprintf(stderr,"                        -N: number of particles\n");
       fprintf(stderr,"--max:                      max 1/T and P/T (e.g. --max 1.0 2.0)\n");
       fprintf(stderr,"--min:                      min 1/T and P/T (e.g. --min 0.5 1.0)\n");
       fprintf(stderr,"--dimension           | -d: number of replicas in each axis (e.g. -d 10 5 for 50 replicas)\n");
@@ -156,7 +156,7 @@ int main(int argc,char **argv){
       re[i].calcPressure();
     }
     re.getREMInfoFromReplicas();
-    if(s>=0) re.Output(output_prefix);
+    if(s>=0) re.OutputAscii(output_prefix);
 
     if(next_chk == s){
       for(int i=0;i<re.getLocalNumberOfReplicas();i++){

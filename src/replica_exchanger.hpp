@@ -1,3 +1,6 @@
+#ifndef HPP_REPLICA_EXCHANGER
+#define HPP_REPLICA_EXCHANGER
+
 #include <cstdio>
 #include <iostream>
 #include <fstream>
@@ -12,12 +15,8 @@
 #include <cassert>
 #include <algorithm>
 
-double random_number(){
-  return (double)rand()/(double)RAND_MAX;
-}
-
 namespace RE{
-  void Initialize(int argc,char **argv){
+  static inline void Initialize(int argc,char **argv){
     #ifdef FMRES_DEBUG_PRINT
     fprintf(stderr,"note: initializing ReplicaExchanger\n");
     #endif
@@ -25,7 +24,7 @@ namespace RE{
     MPI::Init(argc,argv);
     #endif
   }
-  void Finalize(){
+  static inline void Finalize(){
     #ifdef FMRES_DEBUG_PRINT
     fprintf(stderr,"note: finializing ReplicaExchanger\n");
     #endif
@@ -42,12 +41,19 @@ namespace RE{
     void Accept(){naccept++;}
     void Deny(){ndeny++;}
 
-    double get(){(double)naccept / (double)(naccept + ndeny);}
+    double get(){
+      if(naccept == 0 && ndeny == 0) return -1;
+      return (double)naccept / (double)(naccept + ndeny);
+    }
   };
 
   template<int NDIM,class TReplica,class TCondition,class TResult>
   class ReplicaExchanger{
   private:
+    double random_number(){
+      return (double)rand()/(double)RAND_MAX;
+    }
+
     typedef Vector<double,NDIM> dvec;
     typedef Vector<   int,NDIM> ivec;
     class REMInfo{
@@ -78,6 +84,11 @@ namespace RE{
     int nprocs, myrank;
     ivec ndim;
 
+#ifdef FMRES_MPI_PARALLEL
+    REMInfo *send_buffer = nullptr;
+    int     *send_count  = nullptr;
+    int     *send_offset = nullptr;
+#endif
   public:
     TReplica& operator[](const int i){ return replica[i]; }
     const TReplica& operator[](const int i) const { return replica[i]; }
@@ -99,6 +110,11 @@ namespace RE{
 	}
 	delete[] output;
       }
+#ifdef FMRES_MPI_PARALLEL
+      if(send_buffer != nullptr) delete[] send_buffer;
+      if(send_count  != nullptr) delete[] send_count;
+      if(send_offset != nullptr) delete[] send_offset;
+#endif
     }
 
     void Initialize(const ivec _ndim){
@@ -151,7 +167,9 @@ namespace RE{
 
     void getREMInfoFromReplicas(){
 #ifdef FMRES_MPI_PARALLEL
-      REMInfo send_buffer[nreplica_local];
+      if(send_buffer == nullptr) send_buffer = new REMInfo[nreplica_local];
+      if(send_count  == nullptr) send_count  = new int[nprocs];
+      if(send_offset == nullptr) send_offset = new int[nprocs];
       for(int i=0;i<nreplica_local;i++){
 	const int index = i + offset_local;
 	//reminfo[index].condition = replica[i].getCondition();
@@ -159,8 +177,6 @@ namespace RE{
 
         send_buffer[i] = reminfo[index];
       }
-      int send_count[nprocs];
-      int send_offset[nprocs];
       for(int i=0;i<nprocs;i++){
         send_count[i]  = nreplica[i] * sizeof(REMInfo) / sizeof(float);
 	send_offset[i] = offset[i]   * sizeof(REMInfo) / sizeof(float);
@@ -241,18 +257,7 @@ namespace RE{
       #endif
       #ifdef FMRES_MPI_PARALLEL
       MPI::COMM_WORLD.Bcast(reminfo,nreplica_total*sizeof(REMInfo)/sizeof(float),MPI_FLOAT,0);
-      /*
-      #ifdef FMRES_DEBUG_PRINT
-      MPI::COMM_WORLD.Barrier();
-      if(myrank == 1){
-        for(int j=0;j<nreplica_total;j++){
-	  printf("rank %d: replica %d T = %lf, ri = %d, ci = %d after exchange\n",myrank,j,reminfo[j].condition.T,reminfo[j].rindex,reminfo[j].cindex);
-        }
-      }
-      MPI::COMM_WORLD.Barrier();
-      #endif // DEBUG
-      //*/
-      #endif
+      #endif // MPI_PARALLEL
 
       std::sort(reminfo,reminfo+nreplica_total,
 		[](const REMInfo& a,const REMInfo& b){return a.rindex < b.rindex;});
@@ -292,7 +297,7 @@ namespace RE{
 		[](const REMInfo& a,const REMInfo& b){return a.rindex < b.rindex;});
     }
 
-    void Output(std::string prefix = ""){
+    void OutputBinary(std::string prefix = ""){
       #ifdef FMRES_DEBUG_PRINT
       for(int i=0;i<nreplica_total;i++){
       printf("rank %d: reminfo %d ri = %d, ci = %d, T = %lf\n",myrank,i,reminfo[i].rindex,reminfo[i].cindex,reminfo[i].condition.T);
@@ -313,13 +318,13 @@ namespace RE{
       printf("rank %d: reminfo %d ri = %d, ci = %d, T = %lf\n",myrank,i,reminfo[i].rindex,reminfo[i].cindex,reminfo[i].condition.T);
       }
       #endif
-#if 0 // output binary
       if(output == nullptr){
 	output = new std::fstream[nreplica_local];
 	for(int i=0;i<nreplica_local;i++){
 	  const int index = i + offset_local;
 	  assert(index == reminfo[index].cindex);
-	  output[i].open(prefix+reminfo[index].condition.getPrefix()+".dat",std::ios::out | std::ios::binary);
+	  const std::string filename = prefix+reminfo[index].condition.getPrefix()+".dat";
+	  output[i].open(filename.c_str(), std::ios::out | std::ios::binary);
 	  assert(!output[i].fail());
 	  output[i].write((char*)&reminfo[index].condition,sizeof(TCondition));
 	}
@@ -329,13 +334,37 @@ namespace RE{
 	assert(index == reminfo[index].cindex);
 	output[i].write((char*)&reminfo[index].result,sizeof(TResult));
       }
-#else // output ascii
+      std::sort(reminfo,reminfo+nreplica_total,
+		[](const REMInfo& a,const REMInfo& b){return a.rindex < b.rindex;});
+    }
+    void OutputAscii(std::string prefix = ""){
+      #ifdef FMRES_DEBUG_PRINT
+      for(int i=0;i<nreplica_total;i++){
+      printf("rank %d: reminfo %d ri = %d, ci = %d, T = %lf\n",myrank,i,reminfo[i].rindex,reminfo[i].cindex,reminfo[i].condition.T);
+      }
+      #ifdef FMRES_MPI_PARALLEL
+      MPI::COMM_WORLD.Barrier();
+      #endif
+      #endif
+
+      std::sort(reminfo,reminfo+nreplica_total,
+		[](const REMInfo& a,const REMInfo& b){return a.cindex < b.cindex;});
+
+      #ifdef FMRES_DEBUG_PRINT
+      #ifdef FMRES_MPI_PARALLEL
+      MPI::COMM_WORLD.Barrier();
+      #endif
+      for(int i=0;i<nreplica_total;i++){
+      printf("rank %d: reminfo %d ri = %d, ci = %d, T = %lf\n",myrank,i,reminfo[i].rindex,reminfo[i].cindex,reminfo[i].condition.T);
+      }
+      #endif
       if(output == nullptr){
 	output = new std::fstream[nreplica_local];
 	for(int i=0;i<nreplica_local;i++){
 	  const int index = i + offset_local;
 	  assert(index == reminfo[index].cindex);
-	  output[i].open(prefix+reminfo[index].condition.getPrefix()+".dat",std::ios::out);
+	  const std::string filename = prefix+reminfo[index].condition.getPrefix()+".dat";
+	  output[i].open(filename.c_str(),std::ios::out);
 	  assert(!output[i].fail());
 	  output[i] << std::fixed;
 	  output[i] << reminfo[index].condition << std::endl;
@@ -346,7 +375,6 @@ namespace RE{
 	assert(index == reminfo[index].cindex);
 	output[i] << reminfo[index].condition << " " << reminfo[index].result << std::endl;
       }
-#endif
       std::sort(reminfo,reminfo+nreplica_total,
 		[](const REMInfo& a,const REMInfo& b){return a.rindex < b.rindex;});
     }
@@ -357,7 +385,7 @@ namespace RE{
 		  [](const REMInfo& a,const REMInfo& b){return a.cindex < b.cindex;});
 
 	std::string filename = prefix + "acceptance_ratio.dat";
-	std::ofstream ofs(filename);
+	std::ofstream ofs(filename.c_str());
 	for(int d=0;d<NDIM;d++){
 	  for(int i=0;i<nreplica_total;i++){
 	    ivec index = index2Indices(i,ndim);
@@ -373,8 +401,8 @@ namespace RE{
       }
     }
 
-    const int getTotalNumberOfReplicas() const { return nreplica_total; }
-    const int getLocalNumberOfReplicas() const { return nreplica_local; }
+    int getTotalNumberOfReplicas() const { return nreplica_total; }
+    int getLocalNumberOfReplicas() const { return nreplica_local; }
     int getRank() const {
 #ifdef FMRES_MPI_PARALLEL
       return MPI::COMM_WORLD.Get_rank();
@@ -391,3 +419,4 @@ namespace RE{
     }
   };
 };
+#endif
